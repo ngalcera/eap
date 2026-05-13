@@ -3,271 +3,182 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestió d'Absentisme EAP Badalona</title>
+    <title>Gestió d'Absentisme EAP</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
         .modal { display: none; }
         .modal.active { display: flex; }
-        button:active { transform: scale(0.98); }
-        .spinner { animation: spin 1s linear infinite; }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .fade-in { animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen text-slate-800">
+<body class="bg-slate-50 min-h-screen">
 
-    <div id="setup-banner" class="hidden bg-amber-50 border-b border-amber-200 px-4 py-3 text-center text-sm text-amber-800">
-        ⚠️ <strong>Falta configurar:</strong> Ves a Plantilla → Connexió Google Sheets.
-    </div>
-
-    <div class="max-w-4xl mx-auto p-4 md:p-8">
-        <header class="mb-8">
-            <div class="flex justify-between items-start mb-6">
-                <h1 class="text-3xl font-bold text-indigo-700">Absentisme EAP</h1>
-                <div id="sync-status" class="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-200 text-[10px] font-bold text-slate-500 cursor-pointer" onclick="manualSync()">
-                    <span class="w-2 h-2 rounded-full bg-slate-400" id="sync-dot"></span>
-                    <span id="sync-text">CARREGANT...</span>
-                </div>
-            </div>
-            
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                    <p class="text-sm text-slate-500 font-medium">Avui</p>
-                    <p id="stat-today" class="text-2xl font-bold text-indigo-600">0</p>
-                </div>
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                    <p class="text-sm text-slate-500 font-medium">Mes</p>
-                    <p id="stat-month" class="text-2xl font-bold text-emerald-600">0</p>
-                </div>
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                    <p class="text-sm text-slate-500 font-medium">Total</p>
-                    <p id="stat-course" class="text-2xl font-bold text-amber-600">0</p>
-                </div>
+    <div class="max-w-xl mx-auto p-4 md:p-6">
+        <header class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold text-indigo-700">Absentisme EAP</h1>
+            <div id="sync-status" class="px-3 py-1 rounded-full text-[10px] font-bold bg-slate-200 text-slate-500">
+                CARREGANT...
             </div>
         </header>
 
-        <nav class="flex space-x-1 mb-6 bg-slate-200 p-1 rounded-lg">
-            <button onclick="showTab('register')" class="nav-btn flex-1 py-2 px-3 rounded-md text-xs font-medium transition-all" id="btn-register">Registrar</button>
-            <button onclick="showTab('summary')" class="nav-btn flex-1 py-2 px-3 rounded-md text-xs font-medium transition-all" id="btn-summary">Resum</button>
-            <button onclick="showTab('absences')" class="nav-btn flex-1 py-2 px-3 rounded-md text-xs font-medium transition-all" id="btn-absences">Rànquing</button>
-            <button onclick="showTab('settings')" class="nav-btn flex-1 py-2 px-3 rounded-md text-xs font-medium transition-all" id="btn-settings">Plantilla</button>
+        <nav class="flex gap-1 bg-slate-200 p-1 rounded-xl mb-6 text-sm font-medium">
+            <button onclick="showTab('register')" class="flex-1 py-2 rounded-lg" id="btn-register">Registrar</button>
+            <button onclick="showTab('summary')" class="flex-1 py-2 rounded-lg" id="btn-summary">Resum</button>
+            <button onclick="showTab('settings')" class="flex-1 py-2 rounded-lg" id="btn-settings">Plantilla</button>
         </nav>
 
-        <main class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+        <main class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
             <section id="tab-register" class="tab-content active">
-                <h2 class="text-xl font-semibold mb-4">Nova Absència</h2>
-                <form id="absence-form" onsubmit="handleAbsenceSubmit(event)" class="space-y-4">
+                <form onsubmit="handleAbsenceSubmit(event)" class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Professional</label>
-                        <select id="reg-professional" required class="w-full p-3 border border-slate-300 rounded-xl bg-white"></select>
+                        <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Professional</label>
+                        <select id="reg-professional" required class="w-full p-3 border rounded-xl bg-slate-50"></select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Data</label>
-                        <input type="date" id="reg-date" required class="w-full p-3 border border-slate-300 rounded-xl">
+                        <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Data</label>
+                        <input type="date" id="reg-date" required class="w-full p-3 border rounded-xl bg-slate-50">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Tipologia</label>
-                        <select id="reg-type" required class="w-full p-3 border border-slate-300 rounded-xl bg-white">
-                            <option value="Malaltia">Malaltia</option>
-                            <option value="Assumptes propis">Assumptes propis</option>
-                            <option value="Formació">Formació</option>
-                            <option value="Altres">Altres</option>
+                        <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Tipus</label>
+                        <select id="reg-type" class="w-full p-3 border rounded-xl bg-slate-50">
+                            <option>Malaltia</option><option>Assumptes propis</option><option>Formació</option><option>Altres</option>
                         </select>
                     </div>
-                    <button type="submit" id="submit-btn" class="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-indigo-700">REGISTRAR</button>
+                    <button type="submit" class="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl shadow-lg">GUARDAR REGISTRE</button>
                 </form>
-                <div id="msg-box" class="mt-4 p-3 rounded-xl hidden text-center font-bold"></div>
             </section>
 
             <section id="tab-summary" class="tab-content">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-semibold">Darrers Registres</h2>
-                    <button onclick="manualSync()" class="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full">⟳ Actualitzar</button>
+                <div class="flex justify-between mb-4">
+                    <h2 class="font-bold">Darrers registres</h2>
+                    <button onclick="manualSync()" class="text-indigo-600 text-xs font-bold">⟳ Actualitzar</button>
                 </div>
-                <div class="overflow-x-auto"><table class="w-full text-sm"><tbody id="summary-table-body" class="divide-y"></tbody></table></div>
-            </section>
-
-            <section id="tab-absences" class="tab-content">
-                <h2 class="text-xl font-semibold mb-4">Rànquing Total</h2>
-                <div id="ranking-container"></div>
+                <div class="divide-y" id="summary-list"></div>
             </section>
 
             <section id="tab-settings" class="tab-content">
-                <h2 class="text-xl font-semibold mb-4">Gestió de Plantilla</h2>
                 <div class="flex gap-2 mb-6">
-                    <input type="text" id="new-prof-input" class="flex-1 p-3 border border-slate-300 rounded-xl" placeholder="Nom i Cognoms">
-                    <button onclick="handleManualAdd()" class="bg-emerald-600 text-white px-6 py-2 rounded-xl font-bold">AFEGIR</button>
+                    <input type="text" id="new-prof" class="flex-1 p-3 border rounded-xl" placeholder="Nou professional">
+                    <button onclick="addProf()" class="bg-emerald-600 text-white px-4 rounded-xl font-bold">+</button>
                 </div>
-                <div class="bg-slate-50 rounded-xl border border-slate-200 mb-8 overflow-hidden">
-                    <table class="w-full text-sm"><tbody id="settings-list" class="divide-y"></tbody></table>
-                </div>
-                <div class="border-t pt-6">
-                    <h3 class="text-base font-semibold mb-1">🔗 Connexió Google Sheets</h3>
-                    <input type="url" id="script-url-input" class="w-full p-3 border border-slate-300 rounded-xl text-xs font-mono mb-2" placeholder="https://script.google.com/macros/s/...">
-                    <button onclick="saveScriptUrl()" class="bg-indigo-600 text-white px-4 py-2 rounded-xl font-bold text-sm w-full">GUARDAR URL</button>
+                <div class="divide-y mb-8" id="prof-list"></div>
+                <div class="pt-6 border-t">
+                    <label class="block text-xs font-bold text-slate-400 mb-2">URL GOOGLE SCRIPT</label>
+                    <input type="text" id="script-url" class="w-full p-2 border rounded text-[10px] font-mono mb-2">
+                    <button onclick="saveConfig()" class="w-full bg-slate-800 text-white py-2 rounded-lg text-xs font-bold">ACTUALITZAR CONNEXIÓ</button>
                 </div>
             </section>
         </main>
     </div>
 
-    <div id="modal-password" class="modal fixed inset-0 z-50 items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-        <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl text-center">
-            <h3 class="text-lg font-bold mb-4">Contrasenya</h3>
-            <input type="password" id="pass-input" class="w-full p-3 border border-slate-300 rounded-xl mb-6 text-center tracking-widest" placeholder="••••">
-            <div class="flex gap-3">
-                <button onclick="hideModal('modal-password')" class="flex-1 py-3 text-slate-500 font-bold bg-slate-100 rounded-xl">CANCEL·LAR</button>
-                <button onclick="checkPassword()" class="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl">OK</button>
-            </div>
+    <div id="modal-pass" class="modal fixed inset-0 bg-slate-900/50 backdrop-blur-sm items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-2xl w-full max-w-xs text-center">
+            <p class="font-bold mb-4">Contrasenya</p>
+            <input type="password" id="pass-val" class="w-full p-3 border rounded-xl mb-4 text-center">
+            <button onclick="confirmAction()" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold">OK</button>
         </div>
     </div>
 
     <script>
-        const APP_KEY = "eapb55bdn";
-        const LOCAL_KEY = "absentisme_v_final";
-        const SCRIPT_URL_KEY = "absentisme_script_url";
-
         let professionals = [];
         let absences = [];
-        let currentAction = null;
-        let targetId = null;
-        let scriptUrl = localStorage.getItem(SCRIPT_URL_KEY) || "";
+        let scriptUrl = localStorage.getItem('eap_script_url') || "";
+        let pendingAction = null;
+
+        function setStatus(txt, cls) {
+            const el = document.getElementById('sync-status');
+            el.textContent = txt;
+            el.className = `px-3 py-1 rounded-full text-[10px] font-bold ${cls}`;
+        }
 
         function showTab(id) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('bg-white', 'shadow-sm', 'text-indigo-700'));
             document.getElementById('tab-' + id).classList.add('active');
-            document.getElementById('btn-' + id).classList.add('bg-white', 'shadow-sm', 'text-indigo-700');
-        }
-
-        function setSyncStatus(text, color, pulse = false) {
-            document.getElementById('sync-text').textContent = text;
-            document.getElementById('sync-dot').className = `w-2 h-2 rounded-full ${color} ${pulse ? 'animate-pulse' : ''}`;
         }
 
         async function manualSync() {
-            if (!scriptUrl) { setSyncStatus("SENSE URL", "bg-amber-400"); return; }
-            setSyncStatus("SINCRONITZANT...", "bg-amber-400", true);
+            if (!scriptUrl) { setStatus("SENSE URL", "bg-amber-100 text-amber-600"); return; }
+            setStatus("SINCRONITZANT...", "bg-blue-100 text-blue-600");
             try {
-                const res = await fetch(scriptUrl, { redirect: 'follow' });
+                const res = await fetch(scriptUrl);
                 const data = await res.json();
                 professionals = data.professionals || [];
                 absences = data.absences || [];
                 updateUI();
-                setSyncStatus("AL NÚVOL ✓", "bg-emerald-500");
-            } catch (e) {
-                setSyncStatus("ERROR XARXA", "bg-red-500");
-            }
+                setStatus("AL NÚVOL ✓", "bg-emerald-100 text-emerald-600");
+            } catch (e) { setStatus("ERROR XARXA", "bg-red-100 text-red-600"); }
         }
 
-        async function saveAndSync() {
-            updateUI();
+        async function save() {
             if (!scriptUrl) return;
-            setSyncStatus("GUARDANT...", "bg-amber-400", true);
+            setStatus("GUARDANT...", "bg-amber-100 text-amber-600");
             try {
-                // CORRECCIÓ CLAU: mode 'no-cors' per evitar l'error de xarxa
                 await fetch(scriptUrl, {
                     method: 'POST',
                     mode: 'no-cors',
-                    headers: { 'Content-Type': 'text/plain' },
                     body: JSON.stringify({ professionals, absences })
                 });
-                setTimeout(manualSync, 2000); // Refresca dades passat un temps
-            } catch (e) {
-                setSyncStatus("ERROR", "bg-red-500");
-            }
+                setTimeout(manualSync, 1500);
+            } catch (e) { setStatus("ERROR AL GUARDAR", "bg-red-100 text-red-600"); }
         }
 
-        function handleManualAdd() {
-            const inp = document.getElementById('new-prof-input');
-            if (inp.value.trim()) {
-                professionals.push(inp.value.trim());
-                professionals.sort();
-                inp.value = "";
-                saveAndSync();
-            }
+        function updateUI() {
+            const sel = document.getElementById('reg-professional');
+            sel.innerHTML = '<option value="">-- Selecciona --</option>' + professionals.map(p => `<option>${p}</option>`).join('');
+            
+            const list = document.getElementById('summary-list');
+            list.innerHTML = absences.sort((a,b) => b.ts - a.ts).slice(0,15).map(a => `
+                <div class="py-3 flex justify-between">
+                    <div><p class="font-bold text-sm">${a.professional}</p><p class="text-[10px] text-slate-400">${a.date} - ${a.type}</p></div>
+                    <button onclick="askPass('delAbs', ${a.id})" class="text-red-300">✕</button>
+                </div>`).join('');
+
+            const plist = document.getElementById('prof-list');
+            plist.innerHTML = professionals.map(p => `
+                <div class="py-2 flex justify-between text-sm"><span>${p}</span><button onclick="askPass('delProf', '${p}')" class="text-red-400">Eliminar</button></div>`).join('');
         }
 
-        async function handleAbsenceSubmit(e) {
+        function addProf() {
+            const v = document.getElementById('new-prof').value.trim();
+            if (v) { professionals.push(v); professionals.sort(); document.getElementById('new-prof').value=""; save(); updateUI(); }
+        }
+
+        function handleAbsenceSubmit(e) {
             e.preventDefault();
             const p = document.getElementById('reg-professional').value;
             const d = document.getElementById('reg-date').value;
             const t = document.getElementById('reg-type').value;
             if (!p || !d) return;
-
-            absences.push({ professional: p, date: d, type: t, ts: new Date(d).getTime(), id: Date.now() });
-            await saveAndSync();
-            e.target.reset();
-            document.getElementById('reg-date').valueAsDate = new Date();
+            absences.push({ id: Date.now(), professional: p, date: d, type: t, ts: new Date(d).getTime() });
+            save(); updateUI();
+            e.target.reset(); document.getElementById('reg-date').valueAsDate = new Date();
         }
 
-        function triggerAction(action, id) {
-            currentAction = action; targetId = id;
-            document.getElementById('pass-input').value = "";
-            document.getElementById('modal-password').classList.add('active');
-        }
-
-        function checkPassword() {
-            if (document.getElementById('pass-input').value === APP_KEY) {
-                if (currentAction === 'deleteProf') professionals = professionals.filter(p => p !== targetId);
-                if (currentAction === 'deleteAbs') absences = absences.filter(a => a.id !== targetId);
-                saveAndSync();
-                hideModal('modal-password');
+        function askPass(action, id) { pendingAction = { action, id }; document.getElementById('modal-pass').classList.add('active'); }
+        
+        function confirmAction() {
+            if (document.getElementById('pass-val').value === "eapb55bdn") {
+                if (pendingAction.action === 'delProf') professionals = professionals.filter(p => p !== pendingAction.id);
+                if (pendingAction.action === 'delAbs') absences = absences.filter(a => a.id !== pendingAction.id);
+                save(); updateUI();
             }
+            document.getElementById('modal-pass').classList.remove('active');
+            document.getElementById('pass-val').value = "";
         }
 
-        function hideModal(id) { document.getElementById(id).classList.remove('active'); }
-
-        function saveScriptUrl() {
-            const url = document.getElementById('script-url-input').value.trim();
-            if (url) {
-                localStorage.setItem(SCRIPT_URL_KEY, url);
-                scriptUrl = url;
-                manualSync();
-            }
-        }
-
-        function updateUI() {
-            const s = document.getElementById('reg-professional');
-            s.innerHTML = '<option value="">-- Selecciona --</option>' + professionals.map(p => `<option value="${p}">${p}</option>`).join('');
-            
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('stat-today').textContent = absences.filter(a => a.date === today).length;
-            document.getElementById('stat-month').textContent = absences.filter(a => a.date && a.date.startsWith(today.substring(0, 7))).length;
-            document.getElementById('stat-course').textContent = absences.length;
-
-            const st = document.getElementById('summary-table-body');
-            st.innerHTML = [...absences].sort((a,b) => b.ts - a.ts).slice(0, 20).map(a => `
-                <tr class="border-b">
-                    <td class="py-3 px-2 font-semibold">${a.professional}</td>
-                    <td class="py-3 px-2 text-xs text-slate-500">${a.date}</td>
-                    <td class="py-3 px-2 text-right"><button onclick="triggerAction('deleteAbs', ${a.id})" class="text-red-400">✕</button></td>
-                </tr>`).join('');
-
-            const rk = document.getElementById('ranking-container');
-            const counts = {}; professionals.forEach(p => counts[p] = 0);
-            absences.forEach(a => { if (counts[a.professional] !== undefined) counts[a.professional]++ });
-            rk.innerHTML = Object.entries(counts).sort((a,b) => b[1]-a[1]).map(([n, c]) => `
-                <div class="flex justify-between py-2 border-b"><span>${n}</span><span class="font-bold text-indigo-600">${c} abs.</span></div>
-            `).join('');
-
-            const sl = document.getElementById('settings-list');
-            sl.innerHTML = professionals.map(n => `
-                <tr class="border-b"><td class="py-3 px-2">${n}</td><td class="text-right"><button onclick="triggerAction('deleteProf', '${n}')" class="text-red-500 text-xs">ELIMINAR</button></td></tr>
-            `).join('');
-        }
-
-        document.getElementById('reg-date').valueAsDate = new Date();
-        showTab('register');
-        updateUI();
-        if (scriptUrl) {
-            document.getElementById('script-url-input').value = scriptUrl;
+        function saveConfig() {
+            scriptUrl = document.getElementById('script-url').value.trim();
+            localStorage.setItem('eap_script_url', scriptUrl);
             manualSync();
         }
+
+        // Init
+        document.getElementById('reg-date').valueAsDate = new Date();
+        document.getElementById('script-url').value = scriptUrl;
+        if (scriptUrl) manualSync(); else updateUI();
     </script>
 </body>
 </html>
