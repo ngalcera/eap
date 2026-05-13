@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestió d'Absentisme EAP Badalona</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .modal { display: none; }
+        .modal.active { display: flex; }
+        button:active { transform: scale(0.98); }
+        .spinner { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .fade-in { animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800">
+
+    <!-- Setup Banner (shown if no script URL configured) -->
+    <div id="setup-banner" class="hidden bg-amber-50 border-b border-amber-200 px-4 py-3 text-center text-sm text-amber-800">
+        ⚠️ <strong>Configura la connexió a Google Sheets:</strong> Ves a Configuració → Connexió Google Sheets i enganxa la URL de l'Apps Script.
+    </div>
+
+    <div class="max-w-4xl mx-auto p-4 md:p-8">
+        <header class="mb-8">
+            <div class="flex justify-between items-start mb-6">
+                <h1 class="text-3xl font-bold text-indigo-700">Gestió d'Absentisme EAP Badalona</h1>
+                <div id="sync-status" class="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-200 text-[10px] font-bold text-slate-500 cursor-pointer" onclick="manualSync()" title="Fes clic per sincronitzar">
+                    <span class="w-2 h-2 rounded-full bg-slate-400" id="sync-dot"></span>
+                    <span id="sync-text">CARREGANT...</span>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                    <p class="text-sm text-slate-500 font-medium">Absents Avui</p>
+                    <p id="stat-today" class="text-2xl font-bold text-indigo-600">0</p>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                    <p class="text-sm text-slate-500 font-medium">Absències del Mes</p>
+                    <p id="stat-month" class="text-2xl font-bold text-emerald-600">0</p>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                    <p class="text-sm text-slate-500 font-medium">Total Curs</p>
+                    <p id="stat-course" class="text-2xl font-bold text-amber-600">0</p>
+                </div>
+            </div>
+        </header>
+
+        <nav class="flex space-x-1 mb-6 bg-slate-200 p-1 rounded-lg">
+            <button onclick="showTab('register')" class="nav-btn flex-1 py-2 px-3 rounded-md text-xs font-medium transition-all bg-white shadow-sm text-indigo-700" id="btn-register">Registrar</button>
+            <button onclick="showTab('summary')" class="nav-btn flex-1 py-2 px-3 rounded-md text-xs font-medium transition-all" id="btn-summary">Resum</button>
+            <button onclick="showTab('absences')" class="nav-btn flex-1 py-2 px-3 rounded-md text-xs font-medium transition-all" id="btn-absences">Absències</button>
+            <button onclick="showTab('settings')" class="nav-btn flex-1 py-2 px-3 rounded-md text-xs font-medium transition-all" id="btn-settings">Plantilla</button>
+        </nav>
+
+        <main class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+            <!-- TAB: Registrar -->
+            <section id="tab-register" class="tab-content active">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold">Nova Absència</h2>
+                    <button onclick="openModal('modal-prof')" class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100 uppercase">
+                        + Nou Prof
+                    </button>
+                </div>
+                <form id="absence-form" onsubmit="handleAbsenceSubmit(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Professional</label>
+                        <select id="reg-professional" required class="w-full p-3 border border-slate-300 rounded-xl bg-white"></select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Data</label>
+                        <input type="date" id="reg-date" required class="w-full p-3 border border-slate-300 rounded-xl">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Tipologia</label>
+                        <select id="reg-type" required class="w-full p-3 border border-slate-300 rounded-xl bg-white">
+                            <option value="Malaltia">Malaltia</option>
+                            <option value="Assumptes propis">Assumptes propis</option>
+                            <option value="Formació">Formació</option>
+                            <option value="Altres">Altres</option>
+                        </select>
+                    </div>
+                    <button type="submit" id="submit-btn" class="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-indigo-700 flex items-center justify-center gap-2">
+                        <span>REGISTRAR</span>
+                    </button>
+                </form>
+                <div id="msg-box" class="mt-4 p-3 rounded-xl hidden text-center font-bold"></div>
+            </section>
+
+            <!-- TAB: Resum -->
+            <section id="tab-summary" class="tab-content">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold">Darrers Registres</h2>
+                    <button onclick="manualSync()" class="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full border border-indigo-100 uppercase">⟳ Actualitzar</button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left">
+                        <thead><tr class="text-xs text-slate-400 uppercase border-b"><th class="pb-2 px-2">Professional</th><th class="pb-2 px-2 text-center">Data</th><th class="pb-2 px-2 text-right">Tipus</th><th class="pb-2 px-2 text-right">Acció</th></tr></thead>
+                        <tbody id="summary-table-body" class="divide-y"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- TAB: Absències -->
+            <section id="tab-absences" class="tab-content">
+                <h2 class="text-xl font-semibold mb-4">Rànquing Total</h2>
+                <div id="ranking-container"></div>
+            </section>
+
+            <!-- TAB: Plantilla / Settings -->
+            <section id="tab-settings" class="tab-content">
+                <h2 class="text-xl font-semibold mb-4">Gestió de Plantilla</h2>
+                <div class="flex gap-2 mb-6">
+                    <input type="text" id="new-prof-input" class="flex-1 p-3 border border-slate-300 rounded-xl" placeholder="Nom i Cognoms">
+                    <button onclick="handleManualAdd()" class="bg-emerald-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-emerald-700">AFEGIR</button>
+                </div>
+                <div class="bg-slate-50 rounded-xl border border-slate-200 mb-8">
+                    <table class="w-full text-sm"><tbody id="settings-list" class="divide-y"></tbody></table>
+                </div>
+
+                <!-- Google Sheets Config -->
+                <div class="border-t pt-6">
+                    <h3 class="text-base font-semibold mb-1 text-slate-700">🔗 Connexió Google Sheets</h3>
+                    <p class="text-xs text-slate-500 mb-3">Enganxa aquí la URL del teu Apps Script per sincronitzar les dades al núvol.</p>
+                    <div class="flex gap-2 mb-2">
+                        <input type="url" id="script-url-input" class="flex-1 p-3 border border-slate-300 rounded-xl text-sm font-mono" placeholder="https://script.google.com/macros/s/...">
+                        <button onclick="saveScriptUrl()" class="bg-indigo-600 text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-indigo-700">GUARDAR</button>
+                    </div>
+                    <div id="url-status" class="text-xs text-slate-400 mt-1"></div>
+                    <div class="mt-4 bg-slate-50 rounded-xl p-4 border border-slate-200">
+                        <p class="text-xs font-bold text-slate-600 mb-2">📋 Com configurar-ho (passos ràpids):</p>
+                        <ol class="text-xs text-slate-500 space-y-1 list-decimal list-inside">
+                            <li>Obre <strong>Google Sheets</strong> i crea un full nou</li>
+                            <li>Ves a <strong>Extensions → Apps Script</strong></li>
+                            <li>Esborra tot el codi i enganxa el codi que trobaràs a l'arxiu <code>apps-script.gs</code></li>
+                            <li>Fes clic a <strong>Desplegar → Nou desplegament</strong></li>
+                            <li>Tipus: <em>Aplicació web</em> · Accés: <em>Qualsevol persona</em></li>
+                            <li>Copia la URL generada i enganxa-la aquí</li>
+                        </ol>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modal: Afegir professional -->
+    <div id="modal-prof" class="modal fixed inset-0 z-50 items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <h3 class="text-lg font-bold mb-4">Afegir Professional</h3>
+            <input type="text" id="modal-input" class="w-full p-3 border border-slate-300 rounded-xl mb-6" placeholder="Nom complet">
+            <div class="flex gap-3">
+                <button onclick="hideModal('modal-prof')" class="flex-1 py-3 text-slate-500 font-bold bg-slate-100 rounded-xl">CANCEL·LAR</button>
+                <button onclick="handleModalAdd()" class="flex-1 py-3 bg-emerald-600 text-white font-bold rounded-xl">GUARDAR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Contrasenya -->
+    <div id="modal-password" class="modal fixed inset-0 z-50 items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl text-center">
+            <h3 class="text-lg font-bold mb-2">Acció Protegida</h3>
+            <p class="text-sm text-slate-500 mb-4" id="pass-desc">Introdueix la contrasenya per continuar.</p>
+            <input type="password" id="pass-input" class="w-full p-3 border border-slate-300 rounded-xl mb-6 text-center tracking-widest" placeholder="••••••••">
+            <div class="flex gap-3">
+                <button onclick="hideModal('modal-password')" class="flex-1 py-3 text-slate-500 font-bold bg-slate-100 rounded-xl">CANCEL·LAR</button>
+                <button onclick="checkPassword()" class="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ─── CONFIG ───────────────────────────────────────────────────────────────
+        const APP_KEY = "eapb55bdn";
+        const LOCAL_KEY = "absentisme_v13_sheets";
+        const SCRIPT_URL_KEY = "absentisme_script_url";
+
+        // ─── STATE ────────────────────────────────────────────────────────────────
+        let professionals = [];
+        let absences = [];
+        let currentAction = null;
+        let targetProf = null;
+        let scriptUrl = localStorage.getItem(SCRIPT_URL_KEY) || "";
+
+        // ─── HELPERS: UI ──────────────────────────────────────────────────────────
+        function showTab(id) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('bg-white', 'shadow-sm', 'text-indigo-700'));
+            document.getElementById('tab-' + id).classList.add('active');
+            document.getElementById('btn-' + id).classList.add('bg-white', 'shadow-sm', 'text-indigo-700');
+        }
+        function openModal(id) { document.getElementById(id).classList.add('active'); }
+        function hideModal(id) { document.getElementById(id).classList.remove('active'); }
+
+        function setSyncStatus(text, color, pulse = false) {
+            document.getElementById('sync-text').textContent = text;
+            const dot = document.getElementById('sync-dot');
+            dot.className = `w-2 h-2 rounded-full ${color} ${pulse ? 'animate-pulse' : ''}`;
+        }
+
+        function showMsg(text, type = 'success') {
+            const b = document.getElementById('msg-box');
+            b.textContent = text;
+            b.className = type === 'success'
+                ? 'mt-4 p-3 rounded-xl bg-emerald-100 text-emerald-700 block text-center font-bold fade-in'
+                : 'mt-4 p-3 rounded-xl bg-red-100 text-red-700 block text-center font-bold fade-in';
+            setTimeout(() => b.classList.add('hidden'), 3000);
+        }
+
+        // ─── HELPERS: DATA ────────────────────────────────────────────────────────
+        function saveLocal() {
+            localStorage.setItem(LOCAL_KEY, JSON.stringify({ professionals, absences }));
+        }
+
+        function loadLocal() {
+            const cached = localStorage.getItem(LOCAL_KEY);
+            if (cached) {
+                const d = JSON.parse(cached);
+                professionals = d.professionals || [];
+                absences = d.absences || [];
+            }
+        }
+
+        // ─── GOOGLE SHEETS API ────────────────────────────────────────────────────
+        async function fetchFromSheets() {
+            if (!scriptUrl) return null;
+            const res = await fetch(scriptUrl + "?action=getData", { redirect: 'follow' });
+            if (!res.ok) throw new Error("HTTP " + res.status);
+            return await res.json();
+        }
+
+        async function pushToSheets(payload) {
+            if (!scriptUrl) return;
+            await fetch(scriptUrl, {
+                method: 'POST',
+                redirect: 'follow',
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify(payload)
+            });
+        }
+
+        async function manualSync() {
+            if (!scriptUrl) {
+                setSyncStatus("SENSE URL", "bg-amber-400");
+                document.getElementById('setup-banner').classList.remove('hidden');
+                showTab('settings');
+                return;
+            }
+            setSyncStatus("SINCRONITZANT...", "bg-amber-400", true);
+            try {
+                const data = await fetchFromSheets();
+                if (data) {
+                    professionals = data.professionals || professionals;
+                    absences = data.absences || absences;
+                    saveLocal();
+                    updateUI();
+                    setSyncStatus("AL NÚVOL ✓", "bg-emerald-500", true);
+                }
+            } catch (e) {
+                console.error("Sync error:", e);
+                setSyncStatus("ERROR XARXA", "bg-red-500");
+            }
+        }
+
+        async function saveAndSync() {
+            saveLocal();
+            updateUI();
+            if (!scriptUrl) {
+                setSyncStatus("LOCAL (sense núvol)", "bg-amber-400");
+                return;
+            }
+            setSyncStatus("GUARDANT...", "bg-amber-400", true);
+            try {
+                await pushToSheets({ professionals, absences });
+                setSyncStatus("SINCRONITZAT ✓", "bg-emerald-500");
+            } catch (e) {
+                console.error("Sync error:", e);
+                setSyncStatus("ERROR GUARDANT", "bg-red-500");
+                showMsg("No s'han pogut sincronitzar les dades. Guarda't l'app i torna a provar.", "error");
+            }
+        }
+
+        // ─── HANDLERS ─────────────────────────────────────────────────────────────
+        function handleManualAdd() {
+            const inp = document.getElementById('new-prof-input');
+            const name = inp.value.trim();
+            if (!name || professionals.includes(name)) return;
+            professionals.push(name);
+            professionals.sort();
+            inp.value = "";
+            saveAndSync();
+        }
+
+        function handleModalAdd() {
+            const inp = document.getElementById('modal-input');
+            const name = inp.value.trim();
+            if (!name) return;
+            if (!professionals.includes(name)) {
+                professionals.push(name);
+                professionals.sort();
+            }
+            inp.value = "";
+            hideModal('modal-prof');
+            saveAndSync();
+        }
+
+        async function handleAbsenceSubmit(e) {
+            e.preventDefault();
+            const p = document.getElementById('reg-professional').value;
+            const d = document.getElementById('reg-date').value;
+            const t = document.getElementById('reg-type').value;
+            if (!p || !d) return;
+
+            const btn = document.getElementById('submit-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<svg class="spinner w-5 h-5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg><span>GUARDANT...</span>';
+
+            absences.push({ professional: p, date: d, type: t, ts: new Date(d).getTime(), id: Date.now() });
+            await saveAndSync();
+
+            showMsg("✓ Absència registrada correctament!");
+            e.target.reset();
+            document.getElementById('reg-date').valueAsDate = new Date();
+            btn.disabled = false;
+            btn.innerHTML = '<span>REGISTRAR</span>';
+        }
+
+        function triggerAction(action, name) {
+            currentAction = action;
+            targetProf = name;
+            document.getElementById('pass-input').value = "";
+            if (action === 'delete') {
+                document.getElementById('pass-desc').textContent = `Eliminaràs "${name}" i totes les seves absències. Introdueix la contrasenya:`;
+            } else if (action === 'deleteAbsence') {
+                document.getElementById('pass-desc').textContent = `Eliminaràs aquesta absència. Introdueix la contrasenya:`;
+            }
+            openModal('modal-password');
+        }
+
+        function checkPassword() {
+            if (document.getElementById('pass-input').value === APP_KEY) {
+                hideModal('modal-password');
+                if (currentAction === 'delete') {
+                    professionals = professionals.filter(p => p !== targetProf);
+                    absences = absences.filter(a => a.professional !== targetProf);
+                    saveAndSync();
+                } else if (currentAction === 'deleteAbsence') {
+                    absences = absences.filter(a => a.id !== targetProf);
+                    saveAndSync();
+                }
+            } else {
+                document.getElementById('pass-input').classList.add('border-red-400', 'bg-red-50');
+                setTimeout(() => document.getElementById('pass-input').classList.remove('border-red-400', 'bg-red-50'), 800);
+            }
+        }
+
+        function saveScriptUrl() {
+            const url = document.getElementById('script-url-input').value.trim();
+            if (!url.startsWith('https://script.google.com')) {
+                document.getElementById('url-status').textContent = '⚠️ La URL ha de ser de script.google.com';
+                document.getElementById('url-status').className = 'text-xs text-red-500 mt-1';
+                return;
+            }
+            scriptUrl = url;
+            localStorage.setItem(SCRIPT_URL_KEY, url);
+            document.getElementById('url-status').textContent = '✓ URL guardada correctament. Sincronitzant...';
+            document.getElementById('url-status').className = 'text-xs text-emerald-600 mt-1';
+            document.getElementById('setup-banner').classList.add('hidden');
+            manualSync();
+        }
+
+        // ─── UI RENDER ────────────────────────────────────────────────────────────
+        function updateUI() {
+            // Select professionals
+            const s = document.getElementById('reg-professional');
+            const old = s.value;
+            s.innerHTML = '<option value="">-- Selecciona professional --</option>' +
+                professionals.map(p => `<option value="${p}">${p}</option>`).join('');
+            if (professionals.includes(old)) s.value = old;
+
+            // Stats
+            const today = new Date().toISOString().split('T')[0];
+            const thisMonth = today.substring(0, 7);
+            document.getElementById('stat-today').textContent = absences.filter(a => a.date === today).length;
+            document.getElementById('stat-month').textContent = absences.filter(a => a.date && a.date.startsWith(thisMonth)).length;
+            document.getElementById('stat-course').textContent = absences.length;
+
+            // Summary table
+            const st = document.getElementById('summary-table-body');
+            const sorted = [...absences].sort((a, b) => b.ts - a.ts).slice(0, 30);
+            st.innerHTML = sorted.length
+                ? sorted.map(a => `
+                    <tr class="border-b hover:bg-slate-50 transition-colors">
+                        <td class="px-2 py-3 font-semibold text-slate-700">${a.professional}</td>
+                        <td class="px-2 py-3 text-center text-indigo-600 font-mono text-xs">${a.date}</td>
+                        <td class="px-2 py-3 text-right text-slate-500 italic text-xs">${a.type}</td>
+                        <td class="px-2 py-3 text-right">
+                            <button onclick="triggerAction('deleteAbsence', ${a.id || 'null'})" class="text-red-400 hover:text-red-600 text-[10px] font-bold uppercase">✕</button>
+                        </td>
+                    </tr>`).join('')
+                : '<tr><td colspan="4" class="text-center py-8 text-slate-400 text-sm">Cap absència registrada</td></tr>';
+
+            // Ranking
+            const rk = document.getElementById('ranking-container');
+            const counts = {};
+            professionals.forEach(p => counts[p] = 0);
+            absences.forEach(a => { if (counts[a.professional] !== undefined) counts[a.professional]++ });
+            const list = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+            const maxCount = list.length ? list[0][1] : 1;
+            rk.innerHTML = list.length
+                ? `<table class="w-full text-sm"><tbody class="divide-y">${list.map(([n, c], i) => `
+                    <tr class="hover:bg-slate-50">
+                        <td class="py-3 pr-2 w-6 text-slate-400 font-mono text-xs">${i + 1}</td>
+                        <td class="py-3 font-semibold">${n}</td>
+                        <td class="py-3 w-24">
+                            <div class="flex items-center gap-2">
+                                <div class="flex-1 bg-slate-100 rounded-full h-2">
+                                    <div class="bg-indigo-500 h-2 rounded-full" style="width:${maxCount ? (c / maxCount * 100) : 0}%"></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-3 text-right font-black text-indigo-700 w-16">${c} abs.</td>
+                    </tr>`).join('')}</tbody></table>`
+                : '<p class="text-center py-8 text-slate-400 text-sm">Afegeix professionals a la plantilla</p>';
+
+            // Settings list
+            const sl = document.getElementById('settings-list');
+            sl.innerHTML = professionals.length
+                ? professionals.map(n => `
+                    <tr class="hover:bg-slate-50">
+                        <td class="py-3 px-3 font-semibold">${n}</td>
+                        <td class="py-3 px-3 text-slate-400 text-xs text-right">${absences.filter(a => a.professional === n).length} abs.</td>
+                        <td class="py-3 px-3 text-right">
+                            <button onclick="triggerAction('delete', '${n.replace(/'/g, "\\'")}')" class="text-red-500 hover:text-red-700 font-bold text-[10px] uppercase">Eliminar</button>
+                        </td>
+                    </tr>`).join('')
+                : '<tr><td colspan="3" class="text-center py-6 text-slate-400 text-sm">Cap professional afegit</td></tr>';
+
+            // Script URL in settings
+            const urlInput = document.getElementById('script-url-input');
+            if (scriptUrl && !urlInput.value) urlInput.value = scriptUrl;
+        }
+
+        // ─── INIT ─────────────────────────────────────────────────────────────────
+        async function init() {
+            document.getElementById('reg-date').valueAsDate = new Date();
+            loadLocal();
+            updateUI();
+
+            if (!scriptUrl) {
+                setSyncStatus("SENSE CONNEXIÓ", "bg-amber-400");
+                document.getElementById('setup-banner').classList.remove('hidden');
+            } else {
+                await manualSync();
+            }
+
+            // Auto-sync every 60s if tab is visible
+            setInterval(() => {
+                if (!document.hidden && scriptUrl) manualSync();
+            }, 60000);
+        }
+
+        // Expose to HTML
+        window.showTab = showTab;
+        window.openModal = openModal;
+        window.hideModal = hideModal;
+        window.handleManualAdd = handleManualAdd;
+        window.handleModalAdd = handleModalAdd;
+        window.handleAbsenceSubmit = handleAbsenceSubmit;
+        window.triggerAction = triggerAction;
+        window.checkPassword = checkPassword;
+        window.saveScriptUrl = saveScriptUrl;
+        window.manualSync = manualSync;
+
+        init();
+    </script>
+</body>
+</html>
