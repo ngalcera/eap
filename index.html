@@ -11,7 +11,7 @@
         .tab-content { display: none; animation: fadeIn 0.3s ease-out; }
         .tab-content.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .nav-active { background-color: white; color: #4f46e5; shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        .nav-active { background-color: white; color: #4f46e5; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
         .modal { display: none; }
         .modal.active { display: flex; }
     </style>
@@ -31,94 +31,100 @@
     </div>
 
     <div class="max-w-xl mx-auto -mt-24 px-4">
-        
         <nav class="flex gap-1 bg-indigo-900/20 p-1.5 rounded-2xl mb-6 backdrop-blur-sm">
-            <button onclick="showTab('register')" id="btn-register" class="flex-1 py-3 rounded-xl text-xs font-bold transition-all nav-active">REGISTRE</button>
-            <button onclick="showTab('summary')" id="btn-summary" class="flex-1 py-3 rounded-xl text-xs font-bold transition-all text-white/80">LLISTA</button>
-            <button onclick="showTab('ranking')" id="btn-ranking" class="flex-1 py-3 rounded-xl text-xs font-bold transition-all text-white/80">RÀNQUING</button>
-            <button onclick="showTab('settings')" id="btn-settings" class="flex-1 py-3 rounded-xl text-xs font-bold transition-all text-white/80">EQUIP</button>
+            <button onclick="showTab('register')" id="btn-register" class="flex-1 py-3 rounded-xl text-[10px] font-bold transition-all nav-active">REGISTRE</button>
+            <button onclick="showTab('summary')" id="btn-summary" class="flex-1 py-3 rounded-xl text-[10px] font-bold transition-all text-white/80">LLISTA</button>
+            <button onclick="showTab('ranking')" id="btn-ranking" class="flex-1 py-3 rounded-xl text-[10px] font-bold transition-all text-white/80">RÀNQUING</button>
+            <button onclick="showTab('export')" id="btn-export" class="flex-1 py-3 rounded-xl text-[10px] font-bold transition-all text-white/80">DESCARREGAR</button>
+            <button onclick="showTab('settings')" id="btn-settings" class="flex-1 py-3 rounded-xl text-[10px] font-bold transition-all text-white/80">EQUIP</button>
         </nav>
 
-        <main class="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+        <main class="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
             
             <section id="tab-register" class="tab-content active p-6">
-                <div class="flex items-center gap-3 mb-6">
-                    <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold">＋</div>
-                    <h2 class="text-lg font-bold">Nou registre</h2>
-                </div>
-                <form onsubmit="handleAbsenceSubmit(event)" class="space-y-5">
+                <form onsubmit="handleAbsenceSubmit(event)" class="space-y-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">Professional</label>
-                        <select id="reg-professional" required class="w-full p-4 border border-slate-200 rounded-2xl bg-slate-50 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"></select>
+                        <select id="reg-professional" required class="w-full p-4 border border-slate-200 rounded-2xl bg-slate-50 outline-none"></select>
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">Data</label>
-                            <input type="date" id="reg-date" required class="w-full p-4 border border-slate-200 rounded-2xl bg-slate-50 outline-none">
+                            <input type="date" id="reg-date" required class="w-full p-4 border border-slate-200 rounded-2xl bg-slate-50">
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">Motiu</label>
-                            <select id="reg-type" class="w-full p-4 border border-slate-200 rounded-2xl bg-slate-50 outline-none">
+                            <select id="reg-type" onchange="toggleObs()" class="w-full p-4 border border-slate-200 rounded-2xl bg-slate-50">
                                 <option>Malaltia</option>
                                 <option>Assumptes propis</option>
                                 <option>Formació</option>
-                                <option>Altres</option>
+                                <option value="Altres">Altres (justificar)</option>
                             </select>
                         </div>
                     </div>
-                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-5 rounded-2xl shadow-lg shadow-indigo-200 transition-all active:scale-95">
+                    <div id="obs-container" class="hidden">
+                        <label class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">Justificació (Obligatòria)</label>
+                        <textarea id="reg-obs" class="w-full p-4 border border-slate-200 rounded-2xl bg-slate-50 outline-none" placeholder="Escriu el motiu..."></textarea>
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-600 text-white font-bold py-5 rounded-2xl shadow-lg active:scale-95 transition-transform">
                         GUARDAR ABSÈNCIA
                     </button>
                 </form>
             </section>
 
             <section id="tab-summary" class="tab-content p-6">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-lg font-bold">Darrers 20 registres</h2>
-                    <button onclick="manualSync()" class="text-indigo-600 text-[10px] font-bold bg-indigo-50 px-3 py-1.5 rounded-full hover:bg-indigo-100">ACTUALITZAR</button>
-                </div>
+                <div class="flex justify-between items-center mb-6"><h2 class="font-bold">Darrers registres</h2></div>
                 <div class="space-y-3" id="summary-list"></div>
             </section>
 
             <section id="tab-ranking" class="tab-content p-6">
-                <div class="flex items-center gap-3 mb-6">
-                    <div class="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center text-amber-600 font-bold italic text-lg">!</div>
-                    <h2 class="text-lg font-bold">Rànquing d'absències</h2>
-                </div>
-                <p class="text-xs text-slate-400 mb-6">Total d'absències acumulades per cada professional.</p>
+                <h2 class="font-bold mb-6">Total d'absències</h2>
                 <div class="space-y-5" id="ranking-list"></div>
             </section>
 
+            <section id="tab-export" class="tab-content p-6">
+                <h2 class="font-bold mb-6">Exportar dades</h2>
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-400 mb-1">DATA INICI</label>
+                            <input type="date" id="exp-start" class="w-full p-3 border rounded-xl bg-slate-50 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-400 mb-1">DATA FI</label>
+                            <input type="date" id="exp-end" class="w-full p-3 border rounded-xl bg-slate-50 text-sm">
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="download('excel')" class="flex-1 bg-emerald-600 text-white py-4 rounded-2xl font-bold text-xs uppercase">Excel / CSV</button>
+                        <button onclick="download('pdf')" class="flex-1 bg-rose-600 text-white py-4 rounded-2xl font-bold text-xs uppercase">PDF</button>
+                    </div>
+                </div>
+            </section>
+
             <section id="tab-settings" class="tab-content p-6">
-                <h2 class="text-lg font-bold mb-6">Gestió de l'Equip</h2>
                 <div class="flex gap-2 mb-8">
-                    <input type="text" id="new-prof" class="flex-1 p-4 border border-slate-200 rounded-2xl bg-slate-50 outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Nom del professional...">
-                    <button onclick="addProf()" class="bg-emerald-600 text-white px-6 rounded-2xl font-bold text-xl hover:bg-emerald-700 transition-colors">+</button>
+                    <input type="text" id="new-prof" class="flex-1 p-4 border rounded-2xl bg-slate-50" placeholder="Nou professional...">
+                    <button onclick="addProf()" class="bg-indigo-600 text-white px-6 rounded-2xl font-bold text-xl">+</button>
                 </div>
                 <div class="space-y-2" id="prof-list"></div>
             </section>
-
         </main>
     </div>
 
     <div id="modal-pass" class="modal fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
         <div class="bg-white p-8 rounded-3xl w-full max-w-xs text-center shadow-2xl">
-            <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">🔐</div>
-            <p class="font-bold text-slate-700 mb-6">Contrasenya de seguretat</p>
-            <input type="password" id="pass-val" class="w-full p-4 border border-slate-200 rounded-2xl mb-6 text-center tracking-widest outline-none bg-slate-50 focus:ring-2 focus:ring-indigo-500">
+            <p class="font-bold text-slate-700 mb-6 text-sm uppercase tracking-widest">Seguretat</p>
+            <input type="password" id="pass-val" class="w-full p-4 border border-slate-200 rounded-2xl mb-6 text-center outline-none bg-slate-50 focus:ring-2 focus:ring-indigo-500">
             <div class="flex gap-3">
-                <button onclick="document.getElementById('modal-pass').classList.remove('active')" class="flex-1 py-4 rounded-2xl font-bold text-slate-400 text-xs">CANCEL·LAR</button>
-                <button onclick="confirmAction()" class="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-bold text-xs shadow-lg shadow-indigo-100">D'ACORD</button>
+                <button onclick="document.getElementById('modal-pass').classList.remove('active')" class="flex-1 py-4 text-slate-400 text-[10px] font-bold">CANCEL·LAR</button>
+                <button onclick="confirmAction()" class="flex-1 bg-indigo-600 text-white py-4 rounded-2xl text-[10px] font-bold uppercase">Confirmar</button>
             </div>
         </div>
     </div>
 
     <script>
-        // ================================================================
-        // CONFIGURACIÓ FIXA: ENGANXA LA TEVA URL AQUÍ
-        // ================================================================
-        const CONFIG_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzMorFqfQK5KDHLa6eJpNLyR9mNy1fbK9k9QZIpQaFBGJq7bWzpFga2GtL6V4M-i0v13Q/exec"; 
-        // ================================================================
+        const CONFIG_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzMorFqfQK5KDHLa6eJpNLyR9mNy1fbK9k9QZIpQaFBGJq7bWzpFga2GtL6V4M-i0v13Q/exec";
 
         let professionals = JSON.parse(localStorage.getItem('eap_prof_backup')) || [];
         let absences = JSON.parse(localStorage.getItem('eap_abs_backup')) || [];
@@ -133,32 +139,30 @@
         function showTab(id) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             document.getElementById('tab-' + id).classList.add('active');
-            
-            document.querySelectorAll('nav button').forEach(b => b.className = "flex-1 py-3 rounded-xl text-xs font-bold transition-all text-white/80");
-            document.getElementById('btn-' + id).className = "flex-1 py-3 rounded-xl text-xs font-bold transition-all nav-active shadow-md";
+            document.querySelectorAll('nav button').forEach(b => b.className = "flex-1 py-3 rounded-xl text-[10px] font-bold transition-all text-white/80");
+            document.getElementById('btn-' + id).className = "flex-1 py-3 rounded-xl text-[10px] font-bold transition-all nav-active";
+        }
+
+        function toggleObs() {
+            const type = document.getElementById('reg-type').value;
+            const container = document.getElementById('obs-container');
+            container.classList.toggle('hidden', type !== 'Altres');
+            if (type === 'Altres') document.getElementById('reg-obs').required = true;
         }
 
         async function manualSync() {
-            if (!CONFIG_SCRIPT_URL || CONFIG_SCRIPT_URL.includes("EL_TEU_URL")) { 
-                setStatus("FALTA URL", "bg-red-500 text-white"); return; 
-            }
-            setStatus("SINCRONITZANT...", "bg-white/20 text-white");
+            if (!CONFIG_SCRIPT_URL) return;
+            setStatus("CONECTANT...", "bg-white/20 text-white");
             try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000);
-                const res = await fetch(CONFIG_SCRIPT_URL, { signal: controller.signal });
-                clearTimeout(timeoutId);
+                const res = await fetch(CONFIG_SCRIPT_URL);
                 const data = await res.json();
                 professionals = data.professionals || [];
                 absences = data.absences || [];
                 localStorage.setItem('eap_prof_backup', JSON.stringify(professionals));
                 localStorage.setItem('eap_abs_backup', JSON.stringify(absences));
                 updateUI();
-                setStatus("AL NÚVOL ✓", "bg-emerald-500 text-white");
-            } catch (e) {
-                setStatus("MODE OFFLINE", "bg-slate-500 text-white");
-                updateUI();
-            }
+                setStatus("ACTUALITZAT", "bg-emerald-500 text-white");
+            } catch (e) { setStatus("MODE LOCAL", "bg-slate-500 text-white"); updateUI(); }
         }
 
         async function save() {
@@ -166,57 +170,65 @@
             localStorage.setItem('eap_abs_backup', JSON.stringify(absences));
             setStatus("GUARDANT...", "bg-amber-500 text-white");
             try {
-                await fetch(CONFIG_SCRIPT_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    body: JSON.stringify({ professionals, absences })
-                });
+                await fetch(CONFIG_SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ professionals, absences }) });
                 setTimeout(manualSync, 2000);
-            } catch (e) { setStatus("ERROR GUARDANT", "bg-red-500 text-white"); }
+            } catch (e) { setStatus("ERROR XARXA", "bg-red-500 text-white"); }
+        }
+
+        function download(format) {
+            const start = document.getElementById('exp-start').value;
+            const end = document.getElementById('exp-end').value;
+            if(!start || !end) { alert("Tria dates!"); return; }
+            
+            const url = `${CONFIG_SCRIPT_URL}?export=true&format=${format}&start=${start}&end=${end}`;
+            setStatus("GENERANT FITXER...", "bg-blue-500 text-white");
+            
+            if (format === 'pdf') {
+                fetch(url).then(r => r.text()).then(base64 => {
+                    const link = document.createElement('a');
+                    link.href = 'data:application/pdf;base64,' + base64;
+                    link.download = `Absencies_${start}_${end}.pdf`;
+                    link.click();
+                    setStatus("PDF BAIXAT", "bg-emerald-500 text-white");
+                });
+            } else {
+                window.open(url, '_blank');
+                setStatus("EXCEL BAIXAT", "bg-emerald-500 text-white");
+            }
         }
 
         function updateUI() {
-            // Dropdown
             const sel = document.getElementById('reg-professional');
             sel.innerHTML = '<option value="">-- Selecciona professional --</option>' + 
                 professionals.sort().map(p => `<option>${p}</option>`).join('');
             
-            // Llista Registres
             const list = document.getElementById('summary-list');
-            list.innerHTML = absences.length === 0 ? '<div class="text-center py-10 text-slate-300 text-sm italic">Cap registre encara</div>' :
-                absences.sort((a,b) => b.ts - a.ts).slice(0,20).map(a => `
-                    <div class="p-4 bg-slate-50 rounded-2xl flex justify-between items-center border border-slate-100">
-                        <div>
-                            <p class="font-bold text-sm text-slate-800">${a.professional}</p>
-                            <p class="text-[10px] text-slate-400 font-bold uppercase mt-0.5">${a.date} <span class="mx-1 text-slate-300">•</span> ${a.type}</p>
-                        </div>
-                        <button onclick="askPass('delAbs', ${a.id})" class="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-red-500 transition-colors">✕</button>
-                    </div>`).join('');
+            list.innerHTML = absences.sort((a,b) => b.ts - a.ts).slice(0,20).map(a => `
+                <div class="p-4 bg-slate-50 rounded-2xl flex justify-between items-center border border-slate-100">
+                    <div>
+                        <p class="font-bold text-sm text-slate-800">${a.professional}</p>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase">${a.date} • ${a.type}</p>
+                        ${a.obs ? `<p class="text-[10px] text-indigo-500 italic mt-1">Obs: ${a.obs}</p>` : ''}
+                    </div>
+                    <button onclick="askPass('delAbs', ${a.id})" class="text-slate-300 px-2">✕</button>
+                </div>`).join('');
 
-            // Rànquing
             const rkList = document.getElementById('ranking-list');
             const counts = {}; professionals.forEach(p => counts[p] = 0);
             absences.forEach(a => { if(counts[a.professional] !== undefined) counts[a.professional]++ });
             const sorted = Object.entries(counts).sort((a,b) => b[1]-a[1]);
-            const max = sorted[0] ? sorted[0][1] : 1;
-            
+            const max = Math.max(...Object.values(counts), 1);
             rkList.innerHTML = sorted.map(([name, count]) => `
-                <div class="space-y-1.5">
-                    <div class="flex justify-between text-xs font-bold uppercase tracking-wide">
-                        <span class="text-slate-600">${name}</span>
-                        <span class="text-indigo-600">${count}</span>
-                    </div>
-                    <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                        <div class="bg-indigo-500 h-full rounded-full" style="width: ${(count/max)*100}%"></div>
-                    </div>
+                <div class="space-y-1">
+                    <div class="flex justify-between text-[10px] font-bold uppercase text-slate-500"><span>${name}</span><span>${count}</span></div>
+                    <div class="bg-slate-100 h-2 rounded-full"><div class="bg-indigo-500 h-full rounded-full" style="width: ${(count/max)*100}%"></div></div>
                 </div>`).join('');
 
-            // Equip
             const plist = document.getElementById('prof-list');
             plist.innerHTML = professionals.sort().map(p => `
-                <div class="p-3 pl-5 bg-slate-50 rounded-2xl flex justify-between items-center text-sm">
+                <div class="p-3 bg-slate-50 rounded-xl flex justify-between items-center text-sm">
                     <span class="font-semibold text-slate-600">${p}</span>
-                    <button onclick="askPass('delProf', '${p}')" class="text-red-400 text-[10px] font-bold p-2">ELIMINAR</button>
+                    <button onclick="askPass('delProf', '${p}')" class="text-red-400 text-[10px] font-bold">ELIMINAR</button>
                 </div>`).join('');
         }
 
@@ -230,26 +242,32 @@
             const p = document.getElementById('reg-professional').value;
             const d = document.getElementById('reg-date').value;
             const t = document.getElementById('reg-type').value;
+            const o = document.getElementById('reg-obs').value;
             if (!p || !d) return;
-            absences.push({ id: Date.now(), professional: p, date: d, type: t, ts: new Date(d).getTime() });
+            if (t === 'Altres' && !o) { alert("Has d'omplir la justificació!"); return; }
+            
+            absences.push({ id: Date.now(), professional: p, date: d, type: t, obs: o, ts: new Date(d).getTime() });
             updateUI(); save();
             e.target.reset(); document.getElementById('reg-date').valueAsDate = new Date();
+            document.getElementById('obs-container').classList.add('hidden');
         }
 
-        function askPass(action, id) { pendingAction = { action, id }; document.getElementById('modal-pass').classList.add('active'); document.getElementById('pass-val').focus(); }
-        
+        function askPass(action, id) { pendingAction = { action, id }; document.getElementById('modal-pass').classList.add('active'); }
         function confirmAction() {
             if (document.getElementById('pass-val').value === "eapb55bdn") {
                 if (pendingAction.action === 'delProf') professionals = professionals.filter(p => p !== pendingAction.id);
                 if (pendingAction.action === 'delAbs') absences = absences.filter(a => a.id !== pendingAction.id);
                 updateUI(); save();
                 document.getElementById('modal-pass').classList.remove('active');
-            } else { alert("Contrasenya incorrecta"); }
+            } else alert("Error");
             document.getElementById('pass-val').value = "";
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('reg-date').valueAsDate = new Date();
+            const avui = new Date().toISOString().split('T')[0];
+            document.getElementById('reg-date').value = avui;
+            document.getElementById('exp-start').value = avui;
+            document.getElementById('exp-end').value = avui;
             updateUI();
             manualSync();
         });
