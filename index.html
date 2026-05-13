@@ -20,7 +20,7 @@
         <header class="flex justify-between items-center mb-6">
             <h1 class="text-2xl font-bold text-indigo-700">Absentisme EAP</h1>
             <div id="sync-status" class="px-3 py-1 rounded-full text-[10px] font-bold bg-slate-200 text-slate-500">
-                CARREGANT...
+                INICIANT...
             </div>
         </header>
 
@@ -54,7 +54,7 @@
             <section id="tab-summary" class="tab-content">
                 <div class="flex justify-between mb-4">
                     <h2 class="font-bold">Darrers registres</h2>
-                    <button onclick="manualSync()" class="text-indigo-600 text-xs font-bold">⟳ Actualitzar</button>
+                    <button onclick="manualSync()" class="text-indigo-600 text-xs font-bold uppercase tracking-wider">⟳ Actualitzar</button>
                 </div>
                 <div class="divide-y" id="summary-list"></div>
             </section>
@@ -66,25 +66,29 @@
                 </div>
                 <div class="divide-y mb-8" id="prof-list"></div>
                 <div class="pt-6 border-t">
-                    <label class="block text-xs font-bold text-slate-400 mb-2">URL GOOGLE SCRIPT</label>
-                    <input type="text" id="script-url" class="w-full p-2 border rounded text-[10px] font-mono mb-2">
-                    <button onclick="saveConfig()" class="w-full bg-slate-800 text-white py-2 rounded-lg text-xs font-bold">ACTUALITZAR CONNEXIÓ</button>
+                    <label class="block text-xs font-bold text-slate-400 mb-2">URL GOOGLE SCRIPT (Configuració)</label>
+                    <input type="text" id="script-url" class="w-full p-2 border rounded text-[10px] font-mono mb-2" placeholder="https://script.google.com/...">
+                    <button onclick="saveConfig()" class="w-full bg-slate-800 text-white py-2 rounded-lg text-xs font-bold">ACTUALITZAR I SINCRONITZAR</button>
                 </div>
             </section>
         </main>
     </div>
 
     <div id="modal-pass" class="modal fixed inset-0 bg-slate-900/50 backdrop-blur-sm items-center justify-center p-4">
-        <div class="bg-white p-6 rounded-2xl w-full max-w-xs text-center">
-            <p class="font-bold mb-4">Contrasenya</p>
-            <input type="password" id="pass-val" class="w-full p-3 border rounded-xl mb-4 text-center">
-            <button onclick="confirmAction()" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold">OK</button>
+        <div class="bg-white p-6 rounded-2xl w-full max-w-xs text-center shadow-2xl">
+            <p class="font-bold mb-4 text-slate-700">Contrasenya de seguretat</p>
+            <input type="password" id="pass-val" class="w-full p-3 border rounded-xl mb-4 text-center tracking-widest">
+            <div class="flex gap-2">
+                <button onclick="document.getElementById('modal-pass').classList.remove('active')" class="flex-1 bg-slate-100 py-3 rounded-xl font-bold text-slate-400 text-xs">CANCEL·LAR</button>
+                <button onclick="confirmAction()" class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold text-xs">CONFIRMAR</button>
+            </div>
         </div>
     </div>
 
     <script>
-        let professionals = [];
-        let absences = [];
+        // --- VARIABLES DE CONTROL ---
+        let professionals = JSON.parse(localStorage.getItem('eap_prof_backup')) || [];
+        let absences = JSON.parse(localStorage.getItem('eap_abs_backup')) || [];
         let scriptUrl = localStorage.getItem('eap_script_url') || "";
         let pendingAction = null;
 
@@ -97,53 +101,106 @@
         function showTab(id) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             document.getElementById('tab-' + id).classList.add('active');
+            
+            // Estil botons navegació
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('bg-white', 'shadow-sm', 'text-indigo-600'));
+            document.getElementById('btn-' + id).classList.add('bg-white', 'shadow-sm', 'text-indigo-600');
         }
 
+        // --- SINCRONITZACIÓ ---
         async function manualSync() {
             if (!scriptUrl) { setStatus("SENSE URL", "bg-amber-100 text-amber-600"); return; }
-            setStatus("SINCRONITZANT...", "bg-blue-100 text-blue-600");
+            
+            setStatus("CONECTANT...", "bg-blue-100 text-blue-600");
+            
             try {
-                const res = await fetch(scriptUrl);
+                // Timeout de 8 segons per si Google no respon
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+                const res = await fetch(scriptUrl, { signal: controller.signal });
+                clearTimeout(timeoutId);
+                
                 const data = await res.json();
+                
+                // Actualitzem les dades i fem backup local
                 professionals = data.professionals || [];
                 absences = data.absences || [];
+                localStorage.setItem('eap_prof_backup', JSON.stringify(professionals));
+                localStorage.setItem('eap_abs_backup', JSON.stringify(absences));
+                
                 updateUI();
                 setStatus("AL NÚVOL ✓", "bg-emerald-100 text-emerald-600");
-            } catch (e) { setStatus("ERROR XARXA", "bg-red-100 text-red-600"); }
+            } catch (e) {
+                console.error("Sincronització fallida:", e);
+                setStatus("OFFLINE (BACKUP)", "bg-slate-200 text-slate-500");
+                updateUI(); // Carrega el que hi hagi en memòria
+            }
         }
 
         async function save() {
             if (!scriptUrl) return;
+            
+            // Backup immediat en local per no perdre res si es tanca el navegador
+            localStorage.setItem('eap_prof_backup', JSON.stringify(professionals));
+            localStorage.setItem('eap_abs_backup', JSON.stringify(absences));
+
             setStatus("GUARDANT...", "bg-amber-100 text-amber-600");
+            
             try {
                 await fetch(scriptUrl, {
                     method: 'POST',
                     mode: 'no-cors',
                     body: JSON.stringify({ professionals, absences })
                 });
-                setTimeout(manualSync, 1500);
-            } catch (e) { setStatus("ERROR AL GUARDAR", "bg-red-100 text-red-600"); }
+                // Esperem una mica i fem un refresc per confirmar
+                setTimeout(manualSync, 2000);
+            } catch (e) {
+                setStatus("ERROR AL GUARDAR", "bg-red-100 text-red-600");
+            }
         }
 
+        // --- INTERFÍCIE (UI) ---
         function updateUI() {
+            // Dropdown de professionals
             const sel = document.getElementById('reg-professional');
-            sel.innerHTML = '<option value="">-- Selecciona --</option>' + professionals.map(p => `<option>${p}</option>`).join('');
+            const currentSel = sel.value;
+            sel.innerHTML = '<option value="">-- Selecciona --</option>' + 
+                professionals.sort().map(p => `<option ${currentSel === p ? 'selected' : ''}>${p}</option>`).join('');
             
+            // Llista de darrers registres
             const list = document.getElementById('summary-list');
-            list.innerHTML = absences.sort((a,b) => b.ts - a.ts).slice(0,15).map(a => `
-                <div class="py-3 flex justify-between">
-                    <div><p class="font-bold text-sm">${a.professional}</p><p class="text-[10px] text-slate-400">${a.date} - ${a.type}</p></div>
-                    <button onclick="askPass('delAbs', ${a.id})" class="text-red-300">✕</button>
-                </div>`).join('');
+            if (absences.length === 0) {
+                list.innerHTML = '<p class="py-8 text-center text-slate-400 text-sm italic">No hi ha registres</p>';
+            } else {
+                list.innerHTML = absences.sort((a,b) => b.ts - a.ts).slice(0,20).map(a => `
+                    <div class="py-3 flex justify-between items-center">
+                        <div>
+                            <p class="font-bold text-sm text-slate-700">${a.professional}</p>
+                            <p class="text-[10px] text-slate-400 font-medium">${a.date} — ${a.type.toUpperCase()}</p>
+                        </div>
+                        <button onclick="askPass('delAbs', ${a.id})" class="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-red-400 transition-colors">✕</button>
+                    </div>`).join('');
+            }
 
+            // Llista de gestió de plantilla
             const plist = document.getElementById('prof-list');
-            plist.innerHTML = professionals.map(p => `
-                <div class="py-2 flex justify-between text-sm"><span>${p}</span><button onclick="askPass('delProf', '${p}')" class="text-red-400">Eliminar</button></div>`).join('');
+            plist.innerHTML = professionals.sort().map(p => `
+                <div class="py-3 flex justify-between items-center text-sm">
+                    <span class="text-slate-600 font-medium">${p}</span>
+                    <button onclick="askPass('delProf', '${p}')" class="text-red-400 text-[10px] font-bold uppercase tracking-tighter border border-red-100 px-2 py-1 rounded-md hover:bg-red-50">Eliminar</button>
+                </div>`).join('');
         }
 
+        // --- ACCIONS ---
         function addProf() {
             const v = document.getElementById('new-prof').value.trim();
-            if (v) { professionals.push(v); professionals.sort(); document.getElementById('new-prof').value=""; save(); updateUI(); }
+            if (v && !professionals.includes(v)) { 
+                professionals.push(v); 
+                document.getElementById('new-prof').value=""; 
+                updateUI();
+                save(); 
+            }
         }
 
         function handleAbsenceSubmit(e) {
@@ -152,33 +209,70 @@
             const d = document.getElementById('reg-date').value;
             const t = document.getElementById('reg-type').value;
             if (!p || !d) return;
-            absences.push({ id: Date.now(), professional: p, date: d, type: t, ts: new Date(d).getTime() });
-            save(); updateUI();
-            e.target.reset(); document.getElementById('reg-date').valueAsDate = new Date();
+            
+            const newAbs = { 
+                id: Date.now(), 
+                professional: p, 
+                date: d, 
+                type: t, 
+                ts: new Date(d).getTime() 
+            };
+            
+            absences.push(newAbs);
+            updateUI();
+            save();
+            
+            e.target.reset(); 
+            document.getElementById('reg-date').valueAsDate = new Date();
+            alert("S'ha registrat l'absència correctament");
         }
 
-        function askPass(action, id) { pendingAction = { action, id }; document.getElementById('modal-pass').classList.add('active'); }
+        function askPass(action, id) { 
+            pendingAction = { action, id }; 
+            document.getElementById('modal-pass').classList.add('active'); 
+            document.getElementById('pass-val').focus();
+        }
         
         function confirmAction() {
             if (document.getElementById('pass-val').value === "eapb55bdn") {
-                if (pendingAction.action === 'delProf') professionals = professionals.filter(p => p !== pendingAction.id);
-                if (pendingAction.action === 'delAbs') absences = absences.filter(a => a.id !== pendingAction.id);
-                save(); updateUI();
+                if (pendingAction.action === 'delProf') {
+                    professionals = professionals.filter(p => p !== pendingAction.id);
+                }
+                if (pendingAction.action === 'delAbs') {
+                    absences = absences.filter(a => a.id !== pendingAction.id);
+                }
+                updateUI();
+                save();
+                document.getElementById('modal-pass').classList.remove('active');
+            } else {
+                alert("Contrasenya incorrecta");
             }
-            document.getElementById('modal-pass').classList.remove('active');
             document.getElementById('pass-val').value = "";
         }
 
         function saveConfig() {
-            scriptUrl = document.getElementById('script-url').value.trim();
-            localStorage.setItem('eap_script_url', scriptUrl);
-            manualSync();
+            const val = document.getElementById('script-url').value.trim();
+            if (val) {
+                scriptUrl = val;
+                localStorage.setItem('eap_script_url', scriptUrl);
+                manualSync();
+            }
         }
 
-        // Init
-        document.getElementById('reg-date').valueAsDate = new Date();
-        document.getElementById('script-url').value = scriptUrl;
-        if (scriptUrl) manualSync(); else updateUI();
+        // --- INICIALITZACIÓ ---
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('reg-date').valueAsDate = new Date();
+            document.getElementById('script-url').value = scriptUrl;
+            
+            showTab('register');
+            updateUI(); // Mostra dades de backup immediatament
+            
+            if (scriptUrl) {
+                manualSync(); // Intenta connectar al núvol
+            } else {
+                setStatus("SENSE CONFIGURAR", "bg-slate-100 text-slate-400");
+            }
+        });
     </script>
 </body>
 </html>
